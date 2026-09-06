@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}
+Student Registration
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <div class="card">
+
+            <div class="card-header">
+                <i class="fa-solid fa-user-plus"></i>
+                Student Registration
+            </div>
+
+            <div class="card-body">
+
+                <form method="POST">
+
+    <label>Student Name</label><br>
+    <input type="text"
+    class="form-control"
+    name="student_name"
+    placeholder="Enter Student Name"
+    required>
+    <br><br>
+
+    <label>Mobile Number</label><br>
+    <input type="tel"
+    class="form-control"
+    name="mobile"
+    placeholder="Enter Mobile Number"
+    required>
+    <br><br>
+
+    <label>Class</label><br>
+    <select class="form-select" name="student_class" required>
+        <option value="">-- Select Class --</option>
+        <option>Nursery</option>
+        <option>LKG</option>
+        <option>UKG</option>
+        <option>1st</option>
+        <option>2nd</option>
+        <option>3rd</option>
+        <option>4th</option>
+        <option>5th</option>
+        <option>6th</option>
+        <option>7th</option>
+        <option>8th</option>
+        <option>9th</option>
+        <option>10th</option>
+        <option>11th</option>
+        <option>12th</option>
+    </select>
+    <br><br>
+
+    <label>Subject</label><br>
+    <input type="text"
+    class="form-control"
+    name="subject"
+    placeholder="Enter Subject"
+    required>
+    <br><br>
+
+    <label>Timing</label><br>
+    <input type="text"
+class="form-control"
+name="timing"
+placeholder="e.g. 4:00 PM - 5:00 PM"
+required>
+    <br><br>
+
+    <label>Monthly Fee</label><br>
+    <input type="number"
+class="form-control"
+name="monthly_fee"
+placeholder="Enter Monthly Fee"
+required>   
+    <br><br>
+
+    <label>Joining Date</label><br>
+    <input type="date"
+class="form-control"
+name="joining_date"
+required>
+    <br><br>
+
+    <button class="btn btn-primary w-100" type="submit">
+    <i class="fa-solid fa-floppy-disk"></i>
+    Save Student
+</button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,2001 @@
+{% extends "base.html" %}
+
+{% block title %}
+Dashboard | Vidya Mandir Classes
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-page">
+
+    <!-- ================= HEADER ================= -->
+
+    <div class="dashboard-header">
+
+        <div>
+            <span class="dashboard-label">
+                VMC ADMIN PANEL
+            </span>
+
+            <h2>
+                Student Dashboard
+            </h2>
+
+            <p>
+                Manage students, fees and academic records from one place.
+            </p>
+        </div>
+
+        <a href="/students" class="add-student-btn">
+            <i class="fa-solid fa-plus"></i>
+            Add Student
+        </a>
+
+    </div>
+    
+
+<!-- ================= SUMMARY CARDS ================= -->
+
+<div class="summary-grid">
+
+    <!-- TOTAL STUDENTS -->
+
+    <div class="summary-card students-card">
+
+        <div class="summary-icon">
+            <i class="fa-solid fa-user-graduate"></i>
+        </div>
+
+        <div class="summary-info">
+
+            <span>Total Students</span>
+
+            <h3>
+                {{ total_students }}
+            </h3>
+
+            <small>
+                <i class="fa-solid fa-users"></i>
+                Registered students
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <!-- MONTHLY FEES -->
+
+    <div class="summary-card fees-card">
+
+        <div class="summary-icon">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+        </div>
+
+        <div class="summary-info">
+
+            <span>Monthly Fees</span>
+
+            <h3>
+                ₹ {{ total_fees or 0 }}
+            </h3>
+
+            <small>
+                <i class="fa-solid fa-calendar"></i>
+                Expected monthly collection
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECORDS -->
+
+    <div class="summary-card records-card">
+
+        <div class="summary-icon">
+            <i class="fa-solid fa-database"></i>
+        </div>
+
+        <div class="summary-info">
+
+            <span>Records</span>
+
+            <h3>
+                {{ students|length }}
+            </h3>
+
+            <small>
+                <i class="fa-solid fa-list"></i>
+                Showing records
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <!-- QUICK ACTION -->
+
+    <div class="summary-card action-card">
+
+        <div class="summary-icon">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+
+        <div class="summary-info">
+
+            <span>Quick Action</span>
+
+            <h3 class="action-text">
+                Add Student
+            </h3>
+
+            <a href="/students">
+                Open student form
+                <i class="fa-solid fa-arrow-right"></i>
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+        <!-- ================= FEE OVERVIEW ================= -->
+
+<div class="fee-overview">
+
+    <div class="fee-overview-header">
+
+        <div>
+            <h3>
+                <i class="fa-solid fa-chart-pie"></i>
+                Fee Overview
+            </h3>
+
+            <p>
+                {{ selected_month }} {{ selected_year }} collection summary
+            </p>
+        </div>
+
+        <div class="fee-month-badge">
+            {{ selected_month }} {{ selected_year }}
+        </div>
+
+    </div>
+
+
+    <div class="fee-overview-grid">
+
+        <!-- EXPECTED FEE -->
+
+        <div class="fee-card expected-card">
+
+            <div class="fee-card-icon">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+
+            <div>
+                <span>Expected Fee</span>
+
+                <h3>
+                    ₹ {{ total_expected }}
+                </h3>
+
+                <small>
+                    Monthly expected collection
+                </small>
+            </div>
+
+        </div>
+
+
+        <!-- COLLECTED FEE -->
+
+        <div class="fee-card collected-card">
+
+            <div class="fee-card-icon">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+
+            <div>
+                <span>Collected</span>
+
+                <h3>
+                    ₹ {{ total_collected }}
+                </h3>
+
+                <small>
+                    Fee collected this month
+                </small>
+            </div>
+
+        </div>
+
+
+        <!-- PENDING FEE -->
+
+        <div class="fee-card pending-card">
+
+            <div class="fee-card-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+
+            <div>
+                <span>Pending</span>
+
+                <h3>
+                    ₹ {{ total_pending }}
+                </h3>
+
+                <small>
+                    Fee still pending
+                </small>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- COLLECTION PROGRESS -->
+
+    <div class="collection-progress">
+
+        <div class="progress-header">
+
+            <span>
+                <i class="fa-solid fa-chart-line"></i>
+                Collection Progress
+            </span>
+
+            <strong>
+                {{ collection_percentage }}%
+            </strong>
+
+        </div>
+
+        <div class="progress-bar-container">
+
+            <div
+                class="progress-bar-fill"
+                data-progress="{{ collection_percentage }}">
+            </div>
+
+        </div>
+
+        <div class="progress-footer">
+
+            <span>
+                ₹ {{ total_collected }} collected
+            </span>
+
+            <span>
+                ₹ {{ total_expected }} expected
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+   <!-- ================= SEARCH ================= -->
+
+    <div class="search-card">
+
+        <div class="search-heading">
+
+            <div class="search-icon">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+
+            <div>
+                <h5>Find a Student</h5>
+
+                <p>
+                    Search student records by name
+                </p>
+            </div>
+
+        </div>
+
+
+        <form method="GET" action="/dashboard" class="search-form">
+
+            <div class="search-input-wrapper">
+
+                <i class="fa-solid fa-search"></i>
+
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search student name..."
+                    value="{{ request.args.get('search', '') }}"
+                >
+
+            </div>
+
+
+            <button type="submit" class="search-btn">
+
+                <i class="fa-solid fa-search"></i>
+                Search
+
+            </button>
+
+
+            {% if request.args.get('search') %}
+
+            <a href="/dashboard" class="clear-btn">
+
+                <i class="fa-solid fa-xmark"></i>
+                Clear
+
+            </a>
+
+            {% endif %}
+
+        </form>
+
+    </div>
+
+
+
+    <!-- ================= STUDENT TABLE ================= -->
+
+    <div class="student-card">
+
+
+        <!-- TABLE HEADER -->
+
+        <div class="student-card-header">
+
+            <div>
+
+                <span class="table-label">
+                    STUDENT MANAGEMENT
+                </span>
+
+                <h5>
+                    <i class="fa-solid fa-users"></i>
+                    Student Records
+                </h5>
+
+            </div>
+
+
+            <div class="student-count">
+
+                <i class="fa-solid fa-user-group"></i>
+
+                {{ students|length }}
+
+                Students
+
+            </div>
+
+        </div>
+
+
+
+        <!-- TABLE -->
+
+        <div class="table-wrapper">
+
+            <table class="student-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>#</th>
+
+                        <th>Student</th>
+
+                        <th>Mobile</th>
+
+                        <th>Class</th>
+
+                        <th>Subject</th>
+
+                        <th>Timing</th>
+
+                        <th>Monthly Fee</th>
+
+                        <th>Payment</th>
+
+                        <th>Pending</th>
+
+                        <th>Status</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for student in students %}
+
+                    <tr>
+
+
+                        <!-- NUMBER -->
+
+                        <td>
+
+                            <span class="serial-number">
+                                {{ loop.index }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- STUDENT -->
+
+                        <td>
+
+                            <div class="student-name">
+
+                                <div class="student-avatar">
+
+                                    {{ student[1][0]|upper }}
+
+                                </div>
+
+                                <div>
+
+                                    <strong>
+                                        {{ student[1] }}
+                                    </strong>
+
+                                    <small>
+                                        ID #{{ student[0] }}
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+
+                        <!-- MOBILE -->
+
+                        <td>
+
+                            <div class="mobile-number">
+
+                                <i class="fa-solid fa-phone"></i>
+
+                                {{ student[2] }}
+
+                            </div>
+
+                        </td>
+
+
+                        <!-- CLASS -->
+
+                        <td>
+
+                            <span class="class-badge">
+
+                                {{ student[3] }}
+
+                            </span>
+
+                        </td>
+
+
+                        <!-- SUBJECT -->
+
+                        <td>
+
+                            <span class="subject-text">
+
+                                {{ student[4] }}
+
+                            </span>
+
+                        </td>
+
+
+                        <!-- TIMING -->
+
+                        <td>
+
+                            <span class="timing-text">
+
+                                <i class="fa-regular fa-clock"></i>
+
+                                {{ student[5] }}
+
+                            </span>
+
+                        </td>
+
+
+                        <!-- MONTHLY FEE -->
+
+                        <td>
+
+                            <strong class="monthly-fee">
+
+                                ₹ {{ student[6] }}
+
+                            </strong>
+
+                        </td>
+
+
+                          <!-- PAYMENT STATUS -->
+
+                        <td>
+
+                         {% if student[12] == "PAID" %}
+
+                         <span class="payment-badge paid">
+                        <i class="fa-solid fa-circle-check"></i>
+                          PAID
+                         </span>
+
+                         {% else %}
+ 
+                         <span class="payment-badge pending">
+                         <i class="fa-solid fa-circle-exclamation"></i>
+                             PENDING
+                         </span>
+
+                         {% endif %}
+
+                             </td>
+
+                        <!-- TOTAL PENDING -->
+
+                        <td>
+
+                          {% if student[11] > 0 %}
+
+                            <strong class="pending-amount">
+                            ₹ {{ student[11] }}
+                            </strong>
+
+                            {% else %}
+
+                            <span class="no-pending">
+                             <i class="fa-solid fa-circle-check"></i>
+                              ₹ 0.00
+                                  </span>
+
+                               {% endif %}
+
+                        </td>  
+
+
+                        <!-- STATUS -->
+
+                        <td>
+
+                            {% if student[8] == "Active" %}
+
+                                <span class="status-badge active">
+
+                                    <span></span>
+
+                                    Active
+
+                                </span>
+
+                            {% else %}
+
+                                <span class="status-badge inactive">
+
+                                    <span></span>
+
+                                    Inactive
+
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- ACTIONS -->
+
+                        <td>
+
+                            <div class="action-buttons">
+
+
+                                <!-- PAY -->
+
+                                <a
+                                    href="/pay_fee/{{ student[0] }}"
+                                    class="action-btn pay"
+                                    title="Pay Fee"
+                                >
+
+                                    <i class="fa-solid fa-indian-rupee-sign"></i>
+
+                                </a>
+
+
+                                <!-- HISTORY -->
+
+                                <a
+                                    href="/payment_history/{{ student[0] }}"
+                                    class="action-btn history"
+                                    title="Payment History"
+                                >
+
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
+
+                                </a>
+
+
+                                <!-- STATUS -->
+
+                                <a
+                                    href="/toggle_status/{{ student[0] }}"
+                                    class="action-btn status-toggle"
+                                    title="{% if student[8] == 'Active' %}Deactivate{% else %}Activate{% endif %}"
+                                >
+
+                                    {% if student[8] == "Active" %}
+
+                                        <i class="fa-solid fa-user-slash"></i>
+
+                                    {% else %}
+
+                                        <i class="fa-solid fa-user-check"></i>
+
+                                    {% endif %}
+
+                                </a>
+
+
+                                <!-- EDIT -->
+
+                                <a
+                                    href="/edit/{{ student[0] }}"
+                                    class="action-btn edit"
+                                    title="Edit Student"
+                                >
+
+                                    <i class="fa-solid fa-pen"></i>
+
+                                </a>
+
+
+                                <!-- DELETE -->
+
+                                <a
+                                    href="/delete/{{ student[0] }}"
+                                    class="action-btn delete"
+                                    title="Delete Student"
+                                    onclick="return confirm('Are you sure you want to delete this student?')"
+                                >
+
+                                    <i class="fa-solid fa-trash"></i>
+
+                                </a>
+
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+
+                    {% else %}
+
+                    <!-- EMPTY -->
+
+                    <tr>
+
+                        <td colspan="11">
+
+                            <div class="empty-state">
+
+                                <div class="empty-icon">
+
+                                    <i class="fa-solid fa-user-graduate"></i>
+
+                                </div>
+
+                                <h5>
+                                    No students found
+                                </h5>
+
+                                <p>
+                                    {% if request.args.get('search') %}
+                                        No student matches your search.
+                                    {% else %}
+                                        Add your first student to get started.
+                                    {% endif %}
+                                </p>
+
+                                <a href="/students" class="add-empty-btn">
+
+                                    <i class="fa-solid fa-plus"></i>
+
+                                    Add Student
+
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- TABLE FOOTER -->
+
+        <div class="student-card-footer">
+
+            <span>
+
+                <i class="fa-solid fa-circle-info"></i>
+
+                Showing {{ students|length }} student records
+
+            </span>
+
+
+            <a href="/students">
+
+                Manage Students
+
+                <i class="fa-solid fa-arrow-right"></i>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ================= DASHBOARD CSS ================= -->
+
+<style>
+
+
+/* ================= GENERAL ================= */
+
+.dashboard-page {
+    width: 100%;
+}
+
+
+/* ================= HEADER ================= */
+
+.dashboard-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 28px;
+
+}
+
+
+.dashboard-label {
+
+    color: #2563eb;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+
+}
+
+
+.dashboard-header h2 {
+
+    margin: 4px 0 5px;
+
+    font-size: 28px;
+
+    font-weight: 800;
+
+    color: #111827;
+
+}
+
+
+.dashboard-header p {
+
+    margin: 0;
+
+    color: #6b7280;
+
+    font-size: 14px;
+
+}
+
+
+.add-student-btn {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    background: #2563eb;
+
+    color: white;
+
+    padding: 12px 18px;
+
+    border-radius: 10px;
+
+    text-decoration: none;
+
+    font-weight: 600;
+
+    font-size: 14px;
+
+    box-shadow: 0 6px 15px rgba(37,99,235,0.2);
+
+    transition: 0.2s;
+
+}
+
+
+.add-student-btn:hover {
+
+    background: #1d4ed8;
+
+    color: white;
+
+    transform: translateY(-2px);
+
+}
+
+
+/* ================= SUMMARY ================= */
+
+.summary-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 18px;
+
+    margin-bottom: 25px;
+
+}
+
+
+.summary-card {
+
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+
+    min-height: 135px;
+
+    transition: 0.2s;
+
+    box-shadow:
+        0 4px 12px rgba(0,0,0,0.03);
+
+}
+
+
+.summary-card:hover {
+
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 10px 25px rgba(0,0,0,0.07);
+
+}
+
+
+.summary-icon {
+
+    width: 52px;
+
+    height: 52px;
+
+    min-width: 52px;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 20px;
+
+}
+
+
+.students-card .summary-icon {
+
+    background: #dbeafe;
+
+    color: #2563eb;
+
+}
+
+
+.fees-card .summary-icon {
+
+    background: #dcfce7;
+
+    color: #16a34a;
+
+}
+
+
+.records-card .summary-icon {
+
+    background: #f3e8ff;
+
+    color: #9333ea;
+
+}
+
+
+.action-card .summary-icon {
+
+    background: #fef3c7;
+
+    color: #d97706;
+
+}
+
+
+.summary-info span {
+
+    display: block;
+
+    color: #6b7280;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+}
+
+
+.summary-info h3 {
+
+    margin: 5px 0;
+
+    color: #111827;
+
+    font-size: 24px;
+
+    font-weight: 800;
+
+}
+
+
+.summary-info small {
+
+    color: #9ca3af;
+
+    font-size: 10px;
+
+}
+
+
+.summary-info small i {
+
+    margin-right: 3px;
+
+}
+
+
+.action-text {
+
+    font-size: 17px !important;
+
+}
+
+
+.summary-info a {
+
+    font-size: 11px;
+
+    color: #d97706;
+
+    text-decoration: none;
+
+    font-weight: 600;
+
+}
+
+
+.summary-info a:hover {
+
+    text-decoration: underline;
+
+}
+
+
+/* ================= SEARCH ================= */
+
+.search-card {
+
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    margin-bottom: 25px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+}
+
+
+.search-heading {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
+
+.search-icon {
+
+    width: 42px;
+
+    height: 42px;
+
+    border-radius: 11px;
+
+    background: #eff6ff;
+
+    color: #2563eb;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+.search-heading h5 {
+
+    margin: 0;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+}
+
+
+.search-heading p {
+
+    margin: 3px 0 0;
+
+    font-size: 11px;
+
+    color: #9ca3af;
+
+}
+
+
+.search-form {
+
+    display: flex;
+
+    gap: 8px;
+
+    flex: 1;
+
+    max-width: 550px;
+
+}
+
+
+.search-input-wrapper {
+
+    position: relative;
+
+    flex: 1;
+
+}
+
+
+.search-input-wrapper i {
+
+    position: absolute;
+
+    left: 14px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #9ca3af;
+
+}
+
+
+.search-input-wrapper input {
+
+    width: 100%;
+
+    height: 43px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 9px;
+
+    outline: none;
+
+    padding: 0 15px 0 40px;
+
+    font-size: 13px;
+
+}
+
+
+.search-input-wrapper input:focus {
+
+    border-color: #2563eb;
+
+    box-shadow:
+        0 0 0 3px rgba(37,99,235,0.08);
+
+}
+
+
+.search-btn,
+.clear-btn {
+
+    height: 43px;
+
+    padding: 0 15px;
+
+    border-radius: 9px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    text-decoration: none;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+}
+
+
+.search-btn {
+
+    border: none;
+
+    background: #2563eb;
+
+    color: white;
+
+}
+
+
+.search-btn:hover {
+
+    background: #1d4ed8;
+
+}
+
+
+.clear-btn {
+
+    background: #f3f4f6;
+
+    color: #374151;
+
+}
+
+
+/* ================= TABLE CARD ================= */
+
+.student-card {
+
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 16px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 4px 12px rgba(0,0,0,0.03);
+
+}
+
+
+.student-card-header {
+
+    padding: 20px 22px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    border-bottom: 1px solid #eef0f3;
+
+}
+
+
+.table-label {
+
+    font-size: 9px;
+
+    letter-spacing: 1.2px;
+
+    font-weight: 800;
+
+    color: #9ca3af;
+
+}
+
+
+.student-card-header h5 {
+
+    margin: 5px 0 0;
+
+    font-size: 16px;
+
+    font-weight: 750;
+
+}
+
+
+.student-card-header h5 i {
+
+    color: #2563eb;
+
+    margin-right: 5px;
+
+}
+
+
+.student-count {
+
+    background: #eff6ff;
+
+    color: #2563eb;
+
+    padding: 7px 11px;
+
+    border-radius: 8px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+
+/* ================= TABLE ================= */
+
+.table-wrapper {
+
+    width: 100%;
+
+    overflow-x: auto;
+
+}
+
+
+.student-table {
+
+    width: 100%;
+
+    min-width: 1250px;
+
+    border-collapse: collapse;
+
+}
+
+
+.student-table thead {
+
+    background: #f8fafc;
+
+}
+
+
+.student-table th {
+
+    padding: 13px 14px;
+
+    color: #6b7280;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    letter-spacing: .5px;
+
+    white-space: nowrap;
+
+    border-bottom: 1px solid #e5e7eb;
+
+}
+
+
+.student-table td {
+
+    padding: 14px;
+
+    border-bottom: 1px solid #f1f5f9;
+
+    white-space: nowrap;
+
+    font-size: 12px;
+
+    color: #374151;
+
+}
+
+
+.student-table tbody tr {
+
+    transition: 0.15s;
+
+}
+
+
+.student-table tbody tr:hover {
+
+    background: #f8fbff;
+
+}
+
+
+.serial-number {
+
+    color: #9ca3af;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+
+/* ================= STUDENT ================= */
+
+.student-name {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+
+.student-avatar {
+
+    width: 35px;
+
+    height: 35px;
+
+    border-radius: 10px;
+
+    background: #dbeafe;
+
+    color: #2563eb;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-weight: 800;
+
+    font-size: 13px;
+
+}
+
+
+.student-name strong {
+
+    display: block;
+
+    color: #111827;
+
+    font-size: 12px;
+
+}
+
+
+.student-name small {
+
+    display: block;
+
+    color: #9ca3af;
+
+    font-size: 9px;
+
+    margin-top: 2px;
+
+}
+
+
+/* ================= OTHER DATA ================= */
+
+.mobile-number {
+
+    color: #4b5563;
+
+}
+
+
+.mobile-number i {
+
+    color: #9ca3af;
+
+    margin-right: 5px;
+
+}
+
+
+.class-badge {
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    border-radius: 7px;
+
+    padding: 5px 8px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+}
+
+
+.subject-text {
+
+    color: #4b5563;
+
+    font-weight: 600;
+
+}
+
+
+.timing-text {
+
+    color: #6b7280;
+
+}
+
+
+.timing-text i {
+
+    margin-right: 4px;
+
+    color: #9ca3af;
+
+}
+
+
+.monthly-fee {
+
+    color: #111827;
+
+}
+
+
+/* ================= PAYMENT ================= */
+
+.payment-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    padding: 5px 8px;
+
+    border-radius: 7px;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+}
+
+
+.payment-badge.paid {
+
+    color: #15803d;
+
+    background: #dcfce7;
+
+}
+
+
+.payment-badge.partial {
+
+    color: #a16207;
+
+    background: #fef3c7;
+
+}
+
+
+.payment-badge.pending {
+
+    color: #dc2626;
+
+    background: #fee2e2;
+
+}
+
+
+.pending-amount {
+
+    color: #dc2626;
+
+}
+
+
+.no-pending {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 4px;
+
+    color: #16a34a;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+}
+
+
+/* ================= STATUS ================= */
+
+.status-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+}
+
+
+.status-badge span {
+
+    width: 7px;
+
+    height: 7px;
+
+    border-radius: 50%;
+
+}
+
+
+.status-badge.active {
+
+    color: #15803d;
+
+}
+
+
+.status-badge.active span {
+
+    background: #22c55e;
+
+}
+
+
+.status-badge.inactive {
+
+    color: #dc2626;
+
+}
+
+
+.status-badge.inactive span {
+
+    background: #ef4444;
+
+}
+
+
+/* ================= ACTION BUTTONS ================= */
+
+.action-buttons {
+
+    display: flex;
+
+    gap: 5px;
+
+}
+
+
+.action-btn {
+
+    width: 29px;
+
+    height: 29px;
+
+    border-radius: 7px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-decoration: none;
+
+    font-size: 10px;
+
+    transition: 0.15s;
+
+}
+
+
+.action-btn:hover {
+
+    transform: translateY(-2px);
+
+}
+
+
+.action-btn.pay {
+
+    background: #dcfce7;
+
+    color: #16a34a;
+
+}
+
+
+.action-btn.history {
+
+    background: #e0f2fe;
+
+    color: #0284c7;
+
+}
+
+
+.action-btn.status-toggle {
+
+    background: #fef3c7;
+
+    color: #d97706;
+
+}
+
+
+.action-btn.edit {
+
+    background: #fef3c7;
+
+    color: #d97706;
+
+}
+
+
+.action-btn.delete {
+
+    background: #fee2e2;
+
+    color: #dc2626;
+
+}
+
+
+/* ================= FOOTER ================= */
+
+.student-card-footer {
+
+    padding: 13px 20px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    color: #9ca3af;
+
+    font-size: 10px;
+
+    background: #fafafa;
+
+}
+
+
+.student-card-footer a {
+
+    color: #2563eb;
+
+    text-decoration: none;
+
+    font-weight: 700;
+
+}
+
+
+.student-card-footer a:hover {
+
+    text-decoration: underline;
+
+}
+
+
+/* ================= EMPTY ================= */
+
+.empty-state {
+
+    text-align: center;
+
+    padding: 60px 20px;
+
+}
+
+
+.empty-icon {
+
+    width: 65px;
+
+    height: 65px;
+
+    margin: auto;
+
+    border-radius: 18px;
+
+    background: #eff6ff;
+
+    color: #2563eb;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 25px;
+
+}
+
+
+.empty-state h5 {
+
+    margin-top: 15px;
+
+    font-weight: 750;
+
+}
+
+
+.empty-state p {
+
+    color: #9ca3af;
+
+    font-size: 12px;
+
+}
+
+
+.add-empty-btn {
+
+    display: inline-flex;
+
+    gap: 7px;
+
+    align-items: center;
+
+    background: #2563eb;
+
+    color: white;
+
+    text-decoration: none;
+
+    padding: 10px 15px;
+
+    border-radius: 9px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+}
+
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1200px) {
+
+    .summary-grid {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+
+    }
+
+}
+
+
+@media (max-width: 800px) {
+
+    .dashboard-header {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 15px;
+
+    }
+
+
+    .search-card {
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+    }
+
+
+    .search-form {
+
+        max-width: none;
+
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .summary-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .search-form {
+
+        flex-wrap: wrap;
+
+    }
+
+
+    .search-input-wrapper {
+
+        flex-basis: 100%;
+
+    }
+
+
+    .student-card-header {
+
+        align-items: flex-start;
+
+        gap: 10px;
+
+        flex-direction: column;
+
+    }
+
+
+    .student-card-footer {
+
+        align-items: flex-start;
+
+        gap: 10px;
+
+        flex-direction: column;
+
+    }
+
+}
+
+</style>
+
+<script>
+    document.querySelectorAll(".progress-bar-fill").forEach(function(bar) {
+
+        let progress = Number(bar.dataset.progress) || 0;
+
+        if (progress < 0) {
+            progress = 0;
+        }
+
+        if (progress > 100) {
+            progress = 100;
+        }
+
+        bar.style.width = progress + "%";
+
+    });
+</script>
+
+{% endblock %}

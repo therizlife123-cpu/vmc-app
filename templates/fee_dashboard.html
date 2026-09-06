@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}
+Fee Dashboard
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- PAGE TITLE -->
+    <div class="mb-4">
+        <h2 class="fw-bold">💰 Fee Dashboard</h2>
+        <p class="text-muted">
+            Vidya Mandir Classes — Fee Management
+        </p>
+    </div>
+
+
+    <!-- MAIN STATISTICS -->
+    <div class="row g-4">
+
+        <!-- Total Collection -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Total Collection</h6>
+
+                <h2 class="fw-bold text-success">
+                    ₹ {{ total_collection }}
+                </h2>
+            </div>
+        </div>
+
+
+        <!-- Pending Amount -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Pending Amount</h6>
+
+                <h2 class="fw-bold text-danger">
+                    ₹ {{ total_pending }}
+                </h2>
+            </div>
+        </div>
+
+
+        <!-- Total Payments -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Total Payments</h6>
+
+                <h2 class="fw-bold">
+                    {{ total_payments }}
+                </h2>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- PAYMENT STATUS -->
+    <div class="row g-4 mt-2">
+
+        <!-- Paid -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3">
+
+                <h6 class="text-muted">
+                    ✅ Paid Payments
+                </h6>
+
+                <h2 class="fw-bold text-success">
+                    {{ paid_payments }}
+                </h2>
+
+            </div>
+        </div>
+
+
+
+
+        <!-- Pending -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 p-3">
+
+                <h6 class="text-muted">
+                    🔴 Pending Payments
+                </h6>
+
+                <h2 class="fw-bold text-danger">
+                    {{ pending_payments }}
+                </h2>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- THIS MONTH COLLECTION -->
+    <div class="row mt-4">
+
+        <div class="col-md-12">
+
+            <div class="card shadow-sm border-0 p-4">
+
+                <h5 class="fw-bold">
+                    📅 This Month Collection
+                </h5>
+
+                <h2 class="fw-bold text-success mt-2">
+                    ₹ {{ monthly_collection }}
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECENT PAYMENTS -->
+    <div class="card shadow-sm border-0 mt-4 mb-5">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                🧾 Recent Fee Payments
+            </h5>
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>Receipt</th>
+                            <th>Student</th>
+                            <th>Month</th>
+                            <th>Paid</th>
+                            <th>Remaining</th>
+                            <th>Date</th>
+                            <th>Status</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for payment in recent_payments %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    #{{ "%04d"|format(payment[0]) }}
+                                </strong>
+                            </td>
+
+
+                            <td>
+                                {{ payment[1] }}
+                            </td>
+
+
+                            <td>
+                                {{ payment[2] }} {{ payment[3] }}
+                            </td>
+
+
+                            <td>
+                                <strong>
+                                    ₹ {{ payment[4] }}
+                                </strong>
+                            </td>
+
+
+                            <td>
+                                ₹ {{ payment[5] }}
+                            </td>
+
+
+                            <td>
+                                {{ payment[6] }}
+                            </td>
+
+
+                            <td>
+
+                                {% if payment[7] == "Paid" %}
+
+                                    <span class="badge bg-success">
+                                        Paid
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-danger">
+                                        Pending
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+
+                        {% else %}
+
+                        <tr>
+
+                            <td colspan="7"
+                                class="text-center text-muted py-4">
+
+                                No fee payments found.
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

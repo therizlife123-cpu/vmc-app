@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}
+Payment History
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">
+                📜 Payment History
+            </h2>
+
+            <p class="text-muted mb-0">
+                VIDYA MANDIR CLASSES
+            </p>
+        </div>
+
+        <a href="/dashboard" class="btn btn-secondary">
+            ← Dashboard
+        </a>
+
+    </div>
+
+
+    <!-- STUDENT INFORMATION -->
+
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold">
+                👨‍🎓 {{ student[1] }}
+            </h4>
+
+            <div class="row mt-3">
+
+                <div class="col-md-3">
+                    <strong>Class:</strong><br>
+                    {{ student[2] }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Subject:</strong><br>
+                    {{ student[3] }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Monthly Fee:</strong><br>
+                    ₹ {{ student[4] }}
+                </div>
+
+                <div class="col-md-3">
+                    <strong>Total Paid:</strong><br>
+                    <span class="text-success fw-bold">
+                        ₹ {{ total_paid }}
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- PAYMENT TABLE -->
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                💰 Payment Records
+            </h5>
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-dark">
+
+                        <tr>
+
+                            <th>#</th>
+                            <th>Month</th>
+                            <th>Total Fee</th>
+                            <th>Paid</th>
+                            <th>Pending</th>
+                            <th>Payment Date</th>
+                            <th>Status</th>
+                            <th>Receipt</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for payment in payments %}
+
+                        <tr>
+
+                            <td>
+                                {{ loop.index }}
+                            </td>
+
+                            <td>
+                                <strong>
+                                    {{ payment[1] }} {{ payment[2] }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                ₹ {{ payment[3] }}
+                            </td>
+
+                            <td>
+                                <span class="text-success fw-bold">
+                                    ₹ {{ payment[4] }}
+                                </span>
+                            </td>
+
+                            <td>
+
+                                {% if payment[5] > 0 %}
+
+                                <span class="badge bg-danger">
+                                    ₹ {{ payment[5] }}
+                                </span>
+
+                                {% else %}
+
+                                <span class="badge bg-success">
+                                    ₹ 0
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+                                {{ payment[6] }}
+                            </td>
+
+                            <td>
+
+                                {% if payment[7] == "Paid" %}
+                                <span class="badge bg-success">✅ Paid</span>
+                                {% elif payment[7] == "Partial" %}
+                                <span class="badge bg-warning text-dark">🟡 Partial</span>
+                                {% else %}
+                                <span class="badge bg-danger">⏳ Pending</span>
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                <a
+                                    href="/receipt/{{ payment[0] }}"
+                                    target="_blank"
+                                    class="btn btn-primary btn-sm">
+
+                                    🧾 Receipt
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+
+                            <td
+                                colspan="8"
+                                class="text-center text-muted py-5">
+
+                                <h5>
+                                    No payment records found.
+                                </h5>
+
+                                <p>
+                                    This student has not made any payment yet.
+                                </p>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<style>
+
+.card {
+    border-radius: 15px;
+}
+
+.table {
+    font-size: 14px;
+}
+
+.table thead th {
+    white-space: nowrap;
+}
+
+.badge {
+    font-size: 12px;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+</style>
+
+{% endblock %}

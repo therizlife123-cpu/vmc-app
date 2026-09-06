@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}
+Pay Fee
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- HEADER -->
+
+    <div class="mb-4">
+
+        <h2 class="fw-bold">
+            💰 Pay Student Fee
+        </h2>
+
+        <p class="text-muted">
+            VIDYA MANDIR CLASSES
+        </p>
+
+    </div>
+
+
+    <!-- STUDENT INFORMATION -->
+
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                👨‍🎓 Student Information
+            </h5>
+
+            <div class="row g-3">
+
+                <div class="col-md-4">
+
+                    <small class="text-muted">
+                        Student Name
+                    </small>
+
+                    <h5 class="fw-bold">
+                        {{ student[1] }}
+                    </h5>
+
+                </div>
+
+
+                <div class="col-md-4">
+
+                    <small class="text-muted">
+                        Monthly Fee
+                    </small>
+
+                    <h5 class="fw-bold text-primary">
+                        ₹ {{ monthly_fee }}
+                    </h5>
+
+                </div>
+
+
+                <div class="col-md-4">
+
+                    <small class="text-muted">
+                        Payment Month
+                    </small>
+
+                    <h5 class="fw-bold">
+                        {{ current_month }} {{ current_year }}
+                    </h5>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- FEE STATUS -->
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body">
+
+                    <p class="text-muted mb-1">
+                        Monthly Fee
+                    </p>
+
+                    <h3 class="fw-bold">
+                        ₹ {{ monthly_fee }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body">
+
+                    <p class="text-muted mb-1">
+                        Already Paid
+                    </p>
+
+                    <h3 class="fw-bold text-success">
+                        ₹ {{ already_paid }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body">
+
+                    <p class="text-muted mb-1">
+                        Pending
+                    </p>
+
+                    <h3 class="fw-bold text-danger">
+                        ₹ {{ current_pending }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Previous unpaid fees</span>
+                <strong>₹ {{ previous_pending }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mt-2">
+                <span class="text-muted">{{ current_month }} {{ current_year }} fee</span>
+                {% if current_due %}
+                    <strong>₹ {{ (current_pending - previous_pending) }}</strong>
+                {% else %}
+                    <strong class="text-primary">Not due yet</strong>
+                {% endif %}
+            </div>
+            <hr>
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold">Total Outstanding</span>
+                <strong class="text-danger">₹ {{ current_pending }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAYMENT FORM -->
+
+    {% if current_pending > 0 %}
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-4">
+                💳 Enter Payment
+            </h5>
+
+            <form method="POST">
+
+                <div class="mb-3">
+
+                    <label class="form-label fw-bold">
+                        Payment Amount
+                    </label>
+
+                    <input
+                        type="number"
+                        name="paid_fee"
+                        class="form-control"
+                        step="0.01"
+                        min="1"
+                        max="{{ current_pending }}"
+                        placeholder="Enter amount"
+                        required
+                    >
+
+                    <small class="text-muted">
+                        Maximum payable amount:
+                        ₹ {{ current_pending }}
+                    </small>
+
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Payment Mode</label>
+                        <select name="payment_mode" class="form-select">
+                            <option value="Cash">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Bank">Bank</option>
+                            <option value="Card">Card</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Remarks</label>
+                        <input type="text" name="remarks" class="form-control" maxlength="255" placeholder="Optional note">
+                    </div>
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="btn btn-success">
+
+                    💰 Submit Payment
+
+                </button>
+
+
+                <a
+                    href="/dashboard"
+                    class="btn btn-secondary">
+
+                    ← Back
+
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    {% else %}
+
+    {% if not current_due %}
+
+    <div class="alert alert-info shadow-sm">
+
+        <h5 class="fw-bold">
+            🔵 Fee Not Due Yet
+        </h5>
+
+        <p class="mb-0">
+            {{ student[1] }} की {{ current_month }} {{ current_year }} की fee
+            अभी pending नहीं है. Due date: {{ current_due_date.strftime("%d %B %Y") }}.
+        </p>
+
+    </div>
+
+    {% else %}
+
+    <div class="alert alert-success shadow-sm">
+
+        <h5 class="fw-bold">
+            🟢 Fee Fully Paid
+        </h5>
+
+        <p class="mb-0">
+            {{ student[1] }} की due fees पूरी जमा हो चुकी हैं।
+        </p>
+
+    </div>
+
+    {% endif %}
+
+    <a
+        href="/dashboard"
+        class="btn btn-primary">
+
+        ← Back to Dashboard
+
+    </a>
+
+    {% endif %}
+
+</div>
+
+
+<style>
+
+.card {
+    border-radius: 15px;
+}
+
+.form-control {
+    border-radius: 8px;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+</style>
+
+{% endblock %}

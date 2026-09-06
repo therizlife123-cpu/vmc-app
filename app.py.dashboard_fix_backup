@@ -1,0 +1,752 @@
+from flask import Flask, render_template, request, redirect, session, flash, url_for
+import os
+import mysql.connector
+from decimal import Decimal, InvalidOperation
+from datetime import datetime, date
+from werkzeug.utils import secure_filename
+
+app = Flask(__name__)
+app.secret_key = os.getenv("VMC_SECRET_KEY", "vmc_secret_key_change_me")
+
+UPLOAD_FOLDER = os.path.join(app.root_path, "static", "images", "signatures")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+ALLOWED_SIGNATURE_EXTENSIONS = {"png", "jpg", "jpeg"}
+
+# Existing coaching_center database schema is the primary database for this app.
+# For now the existing password is kept as a fallback so the project runs as before.
+# Prefer setting VMC_DB_PASSWORD in your environment.
+DB_PASSWORD = os.getenv("VMC_DB_PASSWORD", "Rizwan@123")
+
+db = mysql.connector.connect(
+    host=os.getenv("VMC_DB_HOST", "localhost"),
+    user=os.getenv("VMC_DB_USER", "root"),
+    password=DB_PASSWORD,
+    database="coaching_center",
+)
+cursor = db.cursor()
+
+MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+]
+MONTH_ORDER_SQL = ", ".join(f"\'{m}\'" for m in MONTHS)
+
+
+def month_key(year, month):
+    return year * 12 + month - 1
+
+
+def normalize_joining_date(joining_date):
+    if isinstance(joining_date, datetime):
+        return joining_date.date()
+    if isinstance(joining_date, str):
+        return datetime.strptime(joining_date, "%Y-%m-%d").date()
+    return joining_date
+
+
+def build_fee_ledger(student_id, monthly_fee, joining_date, through_date=None):
+    """Build a month-by-month fee ledger from admission month through the given month.
+
+    Missing fee rows are treated as virtual pending months. They are NOT inserted until
+    an actual payment is made, which keeps payment_date meaningful and works with the
+    existing schema where fees.payment_date is NOT NULL.
+    """
+    joining_date = normalize_joining_date(joining_date)
+    through_date = through_date or datetime.now().date()
+    if not joining_date or joining_date > through_date:
+        return []
+
+    fee = Decimal(str(monthly_fee or 0)).quantize(Decimal("0.01"))
+    cursor.execute(
+        """SELECT id, month, year, total_fee, paid_fee, remaining_fee, payment_date, status, teacher_id
+           FROM fees WHERE student_id=%s""",
+        (student_id,),
+    )
+    existing = {}
+    for row in cursor.fetchall():
+        existing[(int(row[2]), row[1])] = row
+
+    start = month_key(joining_date.year, joining_date.month)
+    end = month_key(through_date.year, through_date.month)
+    ledger = []
+    for key in range(start, end + 1):
+        year = key // 12
+        month_no = (key % 12) + 1
+        month_name = MONTHS[month_no - 1]
+        row = existing.get((year, month_name))
+        if row:
+            total = Decimal(str(row[3] or 0))
+            paid = Decimal(str(row[4] or 0))
+            remaining = max(Decimal(str(row[5] or 0)), Decimal("0.00"))
+            ledger.append({
+                "id": row[0], "month": month_name, "year": year,
+                "total_fee": total, "paid_fee": paid, "remaining_fee": remaining,
+                "status": row[7], "teacher_id": row[8],
+            })
+        else:
+            ledger.append({
+                "id": None, "month": month_name, "year": year,
+                "total_fee": fee, "paid_fee": Decimal("0.00"),
+                "remaining_fee": fee, "status": "Pending", "teacher_id": None,
+            })
+    return ledger
+
+
+def ensure_all_current_fee_records():
+    """Compatibility wrapper. Missing months are intentionally virtual until paid."""
+    return
+
+
+def login_required():
+    if "teacher_id" not in session:
+        return redirect(url_for("login"))
+    return None
+
+
+def parse_amount(value):
+    try:
+        amount = Decimal(str(value).strip())
+    except (InvalidOperation, AttributeError):
+        raise ValueError("Invalid payment amount")
+    if amount <= 0:
+        raise ValueError("Payment amount must be greater than 0")
+    return amount.quantize(Decimal("0.01"))
+
+
+def signature_extension(filename):
+    if not filename or "." not in filename:
+        return None
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext if ext in ALLOWED_SIGNATURE_EXTENSIONS else None
+
+
+@app.route("/")
+def home():
+    return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        cursor.execute(
+            """
+            SELECT id, teacher_name, username, signature
+            FROM teachers
+            WHERE username = %s AND password = %s
+            LIMIT 1
+            """,
+            (username, password),
+        )
+        teacher = cursor.fetchone()
+
+        if teacher:
+            session.clear()
+            session["teacher_id"] = teacher[0]
+            session["teacher_name"] = teacher[1]
+            session["teacher_username"] = teacher[2]
+            session["teacher_signature"] = teacher[3]
+            return redirect(url_for("dashboard"))
+
+        flash("Invalid username or password.", "danger")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/students", methods=["GET", "POST"])
+def students():
+    guard = login_required()
+    if guard:
+        return guard
+
+    if request.method == "POST":
+        student_name = request.form.get("student_name", "").strip()
+        mobile = request.form.get("mobile", "").strip()
+        student_class = request.form.get("student_class", "").strip()
+        subject = request.form.get("subject", "").strip()
+        timing = request.form.get("timing", "").strip()
+        monthly_fee = request.form.get("monthly_fee", "").strip()
+        joining_date = request.form.get("joining_date", "").strip()
+
+        if not all([student_name, mobile, student_class, subject, timing, monthly_fee, joining_date]):
+            flash("Please fill all required fields.", "danger")
+            return render_template("students.html")
+
+        try:
+            fee = Decimal(monthly_fee)
+            if fee < 0:
+                raise InvalidOperation
+        except InvalidOperation:
+            flash("Monthly fee must be a valid non-negative number.", "danger")
+            return render_template("students.html")
+
+        try:
+            cursor.execute(
+                """
+                INSERT INTO students
+                (student_name, mobile, student_class, subject, timing, monthly_fee, joining_date, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'Active')
+                """,
+                (student_name, mobile, student_class, subject, timing, fee, joining_date),
+            )
+            db.commit()
+            flash("Student saved successfully.", "success")
+            return redirect(url_for("dashboard"))
+        except mysql.connector.Error as exc:
+            db.rollback()
+            flash(f"Could not save student: {exc}", "danger")
+
+    return render_template("students.html")
+
+
+@app.route("/fees")
+def fees():
+    guard = login_required()
+    if guard:
+        return guard
+    return redirect(url_for("fee_dashboard"))
+
+
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    guard = login_required()
+    if guard:
+        return guard
+
+    teacher_id = session["teacher_id"]
+
+    if request.method == "POST":
+        signature = request.files.get("signature")
+        ext = signature_extension(signature.filename if signature else "")
+
+        if not signature or not signature.filename:
+            flash("Please select a signature image.", "danger")
+        elif not ext:
+            flash("Only PNG, JPG or JPEG signature images are allowed.", "danger")
+        else:
+            filename = secure_filename(f"teacher_{teacher_id}.{ext}")
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            signature.save(filepath)
+            signature_path = f"images/signatures/{filename}"
+
+            cursor.execute(
+                "UPDATE teachers SET signature = %s WHERE id = %s",
+                (signature_path, teacher_id),
+            )
+            db.commit()
+            session["teacher_signature"] = signature_path
+            flash("Signature uploaded successfully.", "success")
+            return redirect(url_for("profile"))
+
+    cursor.execute(
+        "SELECT teacher_name, username, signature FROM teachers WHERE id = %s",
+        (teacher_id,),
+    )
+    teacher = cursor.fetchone()
+
+    if not teacher:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("profile.html", teacher=teacher)
+
+
+@app.route("/dashboard")
+def dashboard():
+    guard = login_required()
+    if guard:
+        return guard
+
+    search = request.args.get("search", "").strip()
+    selected_month = request.args.get("month") or datetime.now().strftime("%B")
+    selected_year_raw = request.args.get("year") or str(datetime.now().year)
+
+    if selected_month not in MONTHS:
+        selected_month = datetime.now().strftime("%B")
+    try:
+        selected_year = int(selected_year_raw)
+    except (TypeError, ValueError):
+        selected_year = datetime.now().year
+
+    # Get students first.  Do not depend on a fees row existing for every month:
+    # build_fee_ledger() treats missing months as unpaid, which is exactly what we
+    # need for students who joined in an earlier month and never paid that month.
+    cursor.execute(
+        """
+        SELECT id, student_name, mobile, student_class, subject, timing,
+               monthly_fee, joining_date, status
+        FROM students
+        WHERE student_name LIKE %s
+        ORDER BY id DESC
+        """,
+        (f"%{search}%",),
+    )
+    students_data = cursor.fetchall()
+
+    students_list = []
+    total_expected = Decimal("0.00")
+    total_collected = Decimal("0.00")
+    total_pending = Decimal("0.00")
+
+    today = datetime.now().date()
+    today_key = month_key(today.year, today.month)
+    selected_key = month_key(selected_year, MONTHS.index(selected_month) + 1)
+
+    for student in students_data:
+        (student_id, student_name, mobile, student_class, subject, timing,
+         monthly_fee_raw, joining_date, status) = student
+        monthly_fee = Decimal(str(monthly_fee_raw or 0)).quantize(Decimal("0.01"))
+
+        # Selected-month paid amount (used by the monthly overview).
+        cursor.execute(
+            """SELECT COALESCE(SUM(paid_fee), 0) FROM fees
+               WHERE student_id=%s AND month=%s AND year=%s""",
+            (student_id, selected_month, selected_year),
+        )
+        selected_paid = Decimal(str(cursor.fetchone()[0] or 0)).quantize(Decimal("0.01"))
+
+        # Overall outstanding from admission month through the current month.
+        ledger = build_fee_ledger(student_id, monthly_fee, joining_date, today)
+        overall_pending = sum((r["remaining_fee"] for r in ledger), Decimal("0.00"))
+
+        # Overall paid against all due months. This is useful for the status badge.
+        overall_paid = sum((r["paid_fee"] for r in ledger), Decimal("0.00"))
+        due_months = len(ledger)
+
+        # Keep the old tuple indexes used by dashboard.html and append:
+        # [9] selected-month paid, [10] overall pending.
+        row = (student_id, student_name, mobile, student_class, subject, timing,
+               monthly_fee, joining_date, status, selected_paid, overall_pending)
+        students_list.append(row)
+
+        # Monthly overview remains month-specific.  Overall pending is shown
+        # separately and includes all unpaid months since admission.
+        chargeable_selected = False
+        if joining_date:
+            if isinstance(joining_date, datetime):
+                joining_date = joining_date.date()
+            join_key = month_key(joining_date.year, joining_date.month)
+            chargeable_selected = join_key <= selected_key <= today_key
+
+        if status == "Active" and chargeable_selected:
+            total_expected += monthly_fee
+            total_collected += selected_paid
+
+        # Dashboard pending must be the student's complete outstanding balance.
+        if status == "Active":
+            total_pending += overall_pending
+
+    cursor.execute("SELECT COUNT(*) FROM students")
+    total_students = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COALESCE(SUM(monthly_fee), 0) FROM students WHERE status = 'Active'")
+    total_fees = cursor.fetchone()[0]
+
+    collection_percentage = (
+        round(float((total_collected / total_expected) * 100), 1)
+        if total_expected > 0 else 0
+    )
+    collection_percentage = min(collection_percentage, 100)
+
+    return render_template(
+        "dashboard.html",
+        students=students_list,
+        total_students=total_students,
+        total_fees=total_fees,
+        total_collected=total_collected,
+        total_pending=total_pending,
+        total_expected=total_expected,
+        collection_percentage=collection_percentage,
+        selected_month=selected_month,
+        selected_year=selected_year,
+    )
+
+
+@app.route("/edit/<int:id>", methods=["GET", "POST"])
+def edit_student(id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute("SELECT * FROM students WHERE id = %s", (id,))
+    student = cursor.fetchone()
+    if not student:
+        return "Student not found", 404
+
+    if request.method == "POST":
+        values = (
+            request.form.get("student_name", "").strip(),
+            request.form.get("mobile", "").strip(),
+            request.form.get("student_class", "").strip(),
+            request.form.get("subject", "").strip(),
+            request.form.get("timing", "").strip(),
+            request.form.get("monthly_fee", "").strip(),
+            request.form.get("joining_date", "").strip(),
+            id,
+        )
+        if not all(values[:-1]):
+            flash("Please fill all fields.", "danger")
+            return render_template("edit_student.html", student=student)
+
+        try:
+            fee = Decimal(values[5])
+            if fee < 0:
+                raise InvalidOperation
+            cursor.execute(
+                """
+                UPDATE students SET student_name=%s, mobile=%s, student_class=%s,
+                subject=%s, timing=%s, monthly_fee=%s, joining_date=%s WHERE id=%s
+                """,
+                (*values[:5], fee, values[6], id),
+            )
+            db.commit()
+            flash("Student updated successfully.", "success")
+            return redirect(url_for("dashboard"))
+        except InvalidOperation:
+            flash("Monthly fee must be a valid non-negative number.", "danger")
+        except mysql.connector.Error as exc:
+            db.rollback()
+            flash(f"Could not update student: {exc}", "danger")
+
+    return render_template("edit_student.html", student=student)
+
+
+@app.route("/delete/<int:id>")
+def delete_student(id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute("SELECT id FROM students WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        return "Student not found", 404
+
+    cursor.execute("SELECT COUNT(*) FROM fees WHERE student_id = %s", (id,))
+    fee_count = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM payments WHERE student_id = %s", (id,))
+    payment_count = cursor.fetchone()[0]
+
+    if fee_count or payment_count:
+        flash("This student cannot be deleted because fee/payment records already exist.", "warning")
+        return redirect(url_for("dashboard"))
+
+    cursor.execute("DELETE FROM students WHERE id = %s", (id,))
+    db.commit()
+    flash("Student deleted successfully.", "success")
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/toggle_status/<int:id>")
+def toggle_status(id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute("SELECT status FROM students WHERE id = %s", (id,))
+    student = cursor.fetchone()
+    if not student:
+        return "Student not found", 404
+
+    new_status = "Inactive" if student[0] == "Active" else "Active"
+    cursor.execute("UPDATE students SET status = %s WHERE id = %s", (new_status, id))
+    db.commit()
+    return redirect(url_for("dashboard"))
+
+
+@app.route("/pay_fee/<int:id>", methods=["GET", "POST"])
+def pay_fee(id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute("SELECT id, student_name, monthly_fee, joining_date FROM students WHERE id = %s", (id,))
+    student = cursor.fetchone()
+    if not student:
+        return "Student not found", 404
+
+    student_id, student_name, monthly_fee_raw, joining_date = student
+    monthly_fee = Decimal(str(monthly_fee_raw or 0)).quantize(Decimal("0.01"))
+    now = datetime.now()
+    current_month = now.strftime("%B")
+    current_year = now.year
+    teacher_id = session["teacher_id"]
+
+    # Build the complete ledger from admission month to the current month.
+    # This includes unpaid months even when no fee row exists yet.
+    ledger = build_fee_ledger(student_id, monthly_fee, joining_date, now.date())
+    current_record = next(
+        (r for r in ledger if r["month"] == current_month and r["year"] == current_year),
+        None,
+    )
+    previous_records = [
+        r for r in ledger
+        if (r["year"] < current_year or
+            (r["year"] == current_year and MONTHS.index(r["month"]) < MONTHS.index(current_month)))
+        and r["remaining_fee"] > 0
+    ]
+
+    previous_pending = sum((r["remaining_fee"] for r in previous_records), Decimal("0.00"))
+    current_month_paid = current_record["paid_fee"] if current_record else Decimal("0.00")
+    current_month_remaining = current_record["remaining_fee"] if current_record else monthly_fee
+    total_outstanding = previous_pending + current_month_remaining
+
+    if request.method == "POST":
+        try:
+            paid_amount = parse_amount(request.form.get("paid_fee", "0"))
+            payment_mode = request.form.get("payment_mode", "Cash").strip() or "Cash"
+            remarks = request.form.get("remarks", "").strip() or None
+
+            if paid_amount > total_outstanding:
+                flash(f"Maximum payable amount is ₹ {total_outstanding}.", "danger")
+                return redirect(url_for("pay_fee", id=id))
+
+            remaining_payment = paid_amount
+            payment_date = now.date()
+
+            # Oldest unpaid month first. Missing months are created only when money
+            # is actually allocated to them, so payment_date is never fake.
+            for record in previous_records:
+                if remaining_payment <= 0:
+                    break
+                allocation = min(remaining_payment, record["remaining_fee"])
+                new_paid = record["paid_fee"] + allocation
+                new_remaining = max(record["remaining_fee"] - allocation, Decimal("0.00"))
+                new_status = "Paid" if new_remaining == 0 else "Partial"
+
+                if record["id"]:
+                    cursor.execute(
+                        """UPDATE fees SET paid_fee=%s, remaining_fee=%s, status=%s,
+                           payment_date=%s, teacher_id=%s WHERE id=%s""",
+                        (new_paid, new_remaining, new_status, payment_date, teacher_id, record["id"]),
+                    )
+                else:
+                    cursor.execute(
+                        """INSERT INTO fees
+                           (student_id, teacher_id, month, year, total_fee, paid_fee,
+                            remaining_fee, payment_date, status)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (student_id, teacher_id, record["month"], record["year"],
+                         record["total_fee"], new_paid, new_remaining, payment_date, new_status),
+                    )
+                remaining_payment -= allocation
+
+            # Then apply the rest to the current month.
+            if remaining_payment > 0 and current_record:
+                allocation = min(remaining_payment, current_month_remaining)
+                new_paid = current_month_paid + allocation
+                new_remaining = max(current_month_remaining - allocation, Decimal("0.00"))
+                new_status = "Paid" if new_remaining == 0 else "Partial"
+                if current_record["id"]:
+                    cursor.execute(
+                        """UPDATE fees SET paid_fee=%s, remaining_fee=%s, status=%s,
+                           payment_date=%s, teacher_id=%s WHERE id=%s""",
+                        (new_paid, new_remaining, new_status, payment_date, teacher_id, current_record["id"]),
+                    )
+                else:
+                    cursor.execute(
+                        """INSERT INTO fees
+                           (student_id, teacher_id, month, year, total_fee, paid_fee,
+                            remaining_fee, payment_date, status)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (student_id, teacher_id, current_month, current_year, monthly_fee,
+                         new_paid, new_remaining, payment_date, new_status),
+                    )
+                remaining_payment -= allocation
+
+            cursor.execute(
+                """INSERT INTO payments
+                   (student_id, amount, payment_month, payment_date, payment_mode, remarks)
+                   VALUES (%s,%s,%s,%s,%s,%s)""",
+                (student_id, paid_amount, current_month, payment_date, payment_mode[:20], remarks),
+            )
+
+            db.commit()
+            flash(f"Payment of ₹ {paid_amount} recorded successfully.", "success")
+            return redirect(url_for("payment_history", id=student_id))
+
+        except (ValueError, InvalidOperation) as exc:
+            db.rollback()
+            flash(str(exc), "danger")
+        except mysql.connector.Error as exc:
+            db.rollback()
+            flash(f"Payment could not be saved: {exc}", "danger")
+
+    return render_template(
+        "pay_fee.html",
+        student=student,
+        monthly_fee=monthly_fee,
+        already_paid=current_month_paid,
+        current_pending=total_outstanding,
+        previous_pending=previous_pending,
+        current_month=current_month,
+        current_year=current_year,
+    )
+
+
+@app.route("/payment_history/<int:id>")
+def payment_history(id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute(
+        "SELECT id, student_name, student_class, subject, monthly_fee FROM students WHERE id=%s",
+        (id,),
+    )
+    student = cursor.fetchone()
+    if not student:
+        return "Student not found", 404
+
+    cursor.execute(
+        """
+        SELECT id, month, year, total_fee, paid_fee, remaining_fee, payment_date, status
+        FROM fees WHERE student_id=%s
+        ORDER BY year DESC, FIELD(month, %s), id DESC
+        """,
+        (id, current_month_name()),
+    )
+    payments = cursor.fetchall()
+
+    cursor.execute("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE student_id=%s", (id,))
+    transaction_total = cursor.fetchone()[0] or 0
+
+    # Existing fee rows may predate the payments table. Keep their total available too.
+    cursor.execute("SELECT COALESCE(SUM(paid_fee), 0) FROM fees WHERE student_id=%s", (id,))
+    fee_total = cursor.fetchone()[0] or 0
+    total_paid = max(Decimal(str(transaction_total)), Decimal(str(fee_total)))
+
+    return render_template("payment_history.html", student=student, payments=payments, total_paid=total_paid)
+
+
+def current_month_name():
+    return datetime.now().strftime("%B")
+
+
+@app.route("/receipt/<int:payment_id>")
+def receipt(payment_id):
+    guard = login_required()
+    if guard:
+        return guard
+
+    query = """
+        SELECT
+            fees.id, students.student_name, students.student_class, students.subject,
+            fees.month, fees.year, fees.total_fee, fees.paid_fee, fees.remaining_fee,
+            fees.payment_date, fees.status, teachers.teacher_name, teachers.signature
+        FROM fees
+        JOIN students ON fees.student_id = students.id
+        LEFT JOIN teachers ON fees.teacher_id = teachers.id
+        WHERE fees.id = %s
+    """
+    cursor.execute(query, (payment_id,))
+    payment = cursor.fetchone()
+    if not payment:
+        return "Payment record not found", 404
+    return render_template("receipt.html", payment=payment)
+
+
+@app.route("/fee_dashboard")
+def fee_dashboard():
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute("SELECT COALESCE(SUM(paid_fee), 0) FROM fees")
+    total_collection = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COALESCE(SUM(remaining_fee), 0) FROM fees")
+    total_pending = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM fees")
+    total_payments = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM fees WHERE status='Paid'")
+    paid_payments = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM fees WHERE status='Partial'")
+    partial_payments = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM fees WHERE status='Pending'")
+    pending_payments = cursor.fetchone()[0]
+
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(paid_fee), 0) FROM fees
+        WHERE MONTH(payment_date)=MONTH(CURDATE()) AND YEAR(payment_date)=YEAR(CURDATE())
+        """
+    )
+    monthly_collection = cursor.fetchone()[0]
+
+    cursor.execute(
+        """
+        SELECT fees.id, students.student_name, fees.month, fees.year,
+               fees.paid_fee, fees.remaining_fee, fees.payment_date, fees.status
+        FROM fees JOIN students ON fees.student_id=students.id
+        ORDER BY fees.id DESC LIMIT 10
+        """
+    )
+    recent_payments = cursor.fetchall()
+
+    return render_template(
+        "fee_dashboard.html",
+        total_collection=total_collection,
+        total_pending=total_pending,
+        total_payments=total_payments,
+        paid_payments=paid_payments,
+        partial_payments=partial_payments,
+        pending_payments=pending_payments,
+        monthly_collection=monthly_collection,
+        recent_payments=recent_payments,
+    )
+
+
+@app.route("/monthly_report")
+def monthly_report():
+    guard = login_required()
+    if guard:
+        return guard
+
+    cursor.execute(
+        f"""
+        SELECT month, year, SUM(paid_fee) AS total_collection, COUNT(*) AS total_payments
+        FROM fees
+        GROUP BY year, month
+        ORDER BY year DESC, FIELD(month, {MONTH_ORDER_SQL}) DESC
+        """
+    )
+    monthly_data = cursor.fetchall()
+
+    cursor.execute("SELECT COALESCE(SUM(paid_fee), 0) FROM fees")
+    report_total_collection = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM fees")
+    report_total_payments = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(DISTINCT CONCAT(year, '-', month)) FROM fees")
+    report_total_months = cursor.fetchone()[0]
+
+    chart_labels = [f"{row[0]} {row[1]}" for row in monthly_data]
+    chart_values = [float(row[2] or 0) for row in monthly_data]
+
+    return render_template(
+        "monthly_report.html",
+        monthly_data=monthly_data,
+        report_total_collection=report_total_collection,
+        report_total_payments=report_total_payments,
+        report_total_months=report_total_months,
+        chart_labels=chart_labels,
+        chart_values=chart_values,
+    )
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

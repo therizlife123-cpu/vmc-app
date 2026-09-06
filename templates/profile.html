@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}
+Teacher Profile
+{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-md-6">
+
+        <div class="card shadow">
+
+            <div class="card-body p-4">
+
+                <h3 class="text-center mb-4">
+                    👨‍🏫 Teacher Profile
+                </h3>
+
+                <h5>
+                    Name: {{ teacher[0] }}
+                </h5>
+
+                <p>
+                    Username: {{ teacher[1] }}
+                </p>
+
+                <hr>
+
+                <h5 class="mb-3">
+                    ✍️ Upload Your Signature
+                </h5>
+
+                <form method="POST"
+                      enctype="multipart/form-data">
+
+                    <input
+                        type="file"
+                        name="signature"
+                        class="form-control mb-3"
+                        accept="image/png,image/jpeg"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100">
+                        Upload Signature
+                    </button>
+
+                </form>
+
+                {% if teacher[2] %}
+
+                <hr>
+
+                <h5>Current Signature</h5>
+
+                <img
+                    src="{{ url_for('static', filename=teacher[2]) }}"
+                    style="max-width:250px; max-height:100px;"
+                    class="img-thumbnail">
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

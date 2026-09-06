@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}
+Edit Student
+{% endblock %}
+
+{% block content %}
+
+<h2 class="text-center mb-4">✏️ Edit Student</h2>
+
+<form method="POST">
+
+    <label>Student Name</label>
+    <input type="text" name="student_name" class="form-control" value="{{ student[1] }}">
+    <br>
+
+    <label>Mobile Number</label>
+    <input type="text" name="mobile" class="form-control" value="{{ student[2] }}">
+    <br>
+
+    <label>Class</label>
+    <input type="text" name="student_class" class="form-control" value="{{ student[3] }}">
+    <br>
+
+    <label>Subject</label>
+    <input type="text"name="subject" class="form-control" value="{{ student[4] }}">
+    <br>
+
+    <label>Timing</label>
+    <input type="text" name="timing" class="form-control" value="{{ student[5] }}">
+    <br>
+
+    <label>Monthly Fee</label>
+    <input type="number" name="monthly_fee" class="form-control" value="{{ student[6] }}">
+    <br>
+
+    <label>Joining Date</label>
+    <input type="date" name="joining_date" class="form-control" value="{{ student[7] }}">
+    <br>
+
+    <button type="submit" class="btn btn-success">
+    💾 Update Student
+    </button>
+
+</form>
+
+{% endblock %}

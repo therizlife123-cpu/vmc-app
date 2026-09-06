@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}
+VMC Fee Receipt
+{% endblock %}
+
+{% block content %}
+
+<div class="vmc-receipt-page">
+
+    <div class="vmc-receipt">
+
+        <!-- HEADER -->
+        <div class="vmc-header">
+
+            <div class="vmc-logo-box">
+                <img
+                    src="{{ url_for('static', filename='images/vmc_logo.png') }}"
+                    alt="VMC Logo"
+                    class="vmc-logo"
+                >
+            </div>
+
+            <div class="vmc-title">
+                <h1>VIDYA MANDIR CLASSES</h1>
+                <p>QUALITY EDUCATION • BRIGHT FUTURE</p>
+
+                <div class="receipt-title">
+                    FEE PAYMENT RECEIPT
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- RECEIPT META -->
+        <div class="receipt-meta">
+
+            <div class="receipt-number">
+                <span>RECEIPT NO.</span>
+                <strong>#{{ "%04d"|format(payment[0]) }}</strong>
+            </div>
+
+            <div class="payment-date">
+                <span>PAYMENT DATE</span>
+                <strong>{{ payment[9] }}</strong>
+            </div>
+
+        </div>
+
+
+        <!-- STUDENT INFORMATION -->
+        <div class="receipt-section">
+
+            <div class="section-heading">
+                STUDENT INFORMATION
+            </div>
+
+            <div class="student-details">
+
+                <div class="detail-item">
+                    <span>Student Name</span>
+                    <strong>{{ payment[1] }}</strong>
+                </div>
+
+                <div class="detail-item">
+                    <span>Class</span>
+                    <strong>{{ payment[2] }}</strong>
+                </div>
+
+                <div class="detail-item">
+                    <span>Subject</span>
+                    <strong>{{ payment[3] }}</strong>
+                </div>
+
+                <div class="detail-item">
+                    <span>Fee Month</span>
+                    <strong>{{ payment[4] }} {{ payment[5] }}</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FEE DETAILS -->
+        <div class="receipt-section">
+
+            <div class="section-heading">
+                PAYMENT DETAILS
+            </div>
+
+            <div class="fee-table">
+
+                <div class="fee-row">
+                    <span>Total Fee</span>
+                    <strong>₹ {{ payment[6] }}</strong>
+                </div>
+
+                <div class="paid-row">
+
+                    <div>
+                        <span>AMOUNT PAID</span>
+                        <strong>₹ {{ payment[7] }}</strong>
+                    </div>
+
+                    <div class="paid-check">
+                        ✓ PAID
+                    </div>
+
+                </div>
+
+                <div class="fee-row">
+                    <span>Remaining Fee</span>
+                    <strong>₹ {{ payment[8] }}</strong>
+                </div>
+
+                <div class="fee-row status-row">
+                    <span>Payment Status</span>
+
+                    <strong class="status-badge">
+                        {{ payment[10] }}
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- BOTTOM / SIGNATURE -->
+        <div class="receipt-bottom">
+
+            <div class="thank-you">
+
+                <strong>Thank You!</strong>
+
+                <p>
+                    We appreciate your timely fee payment.
+                </p>
+
+            </div>
+
+
+            <!-- TEACHER SIGNATURE -->
+
+            <div class="authorized-signature">
+
+                {% if payment[12] %}
+
+                    <img 
+                       src="{{ url_for('static', filename=payment[12]) }}"
+                       alt="Teacher Signature"
+                       class="teacher-signature"
+                  >
+
+                {% else %}
+
+                    <span class="text-muted">
+                        No Signature Available
+                    </span>
+
+                {% endif %}
+
+                <div class="signature-line"></div>
+
+                <strong>
+                    {{ payment[11] or "Teacher" }}
+                </strong>
+
+                <span>
+                    Authorized Signature
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOOTER -->
+        <div class="receipt-footer">
+
+            <strong>
+                VIDYA MANDIR CLASSES
+            </strong>
+
+            <p>
+                Madhu Vihar, Gali No. 8, Khoda Colony, Ghaziabad, U.P.
+            </p>
+
+            <small>
+                This is a computer-generated fee receipt.
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <!-- PRINT BUTTON -->
+
+    <div class="receipt-actions">
+
+        <button
+            onclick="window.print()"
+            class="print-receipt-btn">
+
+            🖨️ Print Receipt
+
+        </button>
+
+    </div>
+
+</div>
+
+{% endblock %}
