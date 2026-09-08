@@ -37,15 +37,15 @@ ALLOWED_SIGNATURE_EXTENSIONS = {
 # DATABASE
 # ==========================================================
 
-DB_PASSWORD = os.getenv(
-    "VMC_DB_PASSWORD",
-    "Rizwan@123"
-)
+# ==========================================================
+# DATABASE
+# ==========================================================
 
 db = mysql.connector.connect(
-    host=os.getenv("VMC_DB_HOST", "localhost"),
-    user=os.getenv("VMC_DB_USER", "root"),
-    password=DB_PASSWORD,
+    host=os.getenv("MYSQL_HOST"),
+    port=int(os.getenv("MYSQL_PORT", "13223")),
+    user=os.getenv("MYSQL_USER"),
+    password=os.getenv("MYSQL_PASSWORD"),
     database="coaching_center",
 )
 
